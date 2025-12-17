@@ -1,5 +1,4 @@
 import time
-import camelot
 import pandas as pd
 from paddleocr import PaddleOCR
 from pdf2image import convert_from_path
@@ -7,7 +6,7 @@ import pdfplumber
 from multiprocessing import Pool, cpu_count
 
 MAX_PROCESSES = min(6, cpu_count())
-OCR_BATCH = 8   # Smaller batch = safer for Streamlit
+OCR_BATCH = 8
 
 ocr = PaddleOCR(
     use_angle_cls=True,
@@ -27,20 +26,6 @@ def is_scanned_pdf(pdf_path, check_pages=3):
         return True
     except:
         return True
-
-# ---------------- TEXT EXTRACTION ----------------
-def extract_text_tables(pdf_path):
-    tables = camelot.read_pdf(
-        pdf_path,
-        pages="all",
-        flavor="stream"
-    )
-    dfs = []
-    for t in tables:
-        df = t.df
-        df["Source"] = "Text"
-        dfs.append(df)
-    return dfs
 
 # ---------------- OCR WORKER ----------------
 def ocr_worker(args):
@@ -74,6 +59,7 @@ def extract_ocr(pdf_path):
     ]
 
     results = []
+    from functools import partial
     with Pool(MAX_PROCESSES) as pool:
         for chunk in pool.imap_unordered(ocr_worker, [(pdf_path, r) for r in page_ranges]):
             results.extend(chunk)
@@ -86,11 +72,7 @@ def extract_pdf(pdf_path):
 
     scanned = is_scanned_pdf(pdf_path)
 
-    if not scanned:
-        tables = extract_text_tables(pdf_path)
-        df = pd.concat(tables, ignore_index=True)
-        return df, time.time() - start
-
+    # Always OCR for simplicity (faster than Camelot on Cloud)
     ocr_tables = extract_ocr(pdf_path)
     df = pd.concat(ocr_tables, ignore_index=True)
     return df, time.time() - start
