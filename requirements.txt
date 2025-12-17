@@ -1,0 +1,10 @@
+streamlit
+pandas
+camelot-py[cv]
+paddleocr
+paddlepaddle
+pdf2image
+opencv-python
+pillow
+tqdm
+ghostscript
